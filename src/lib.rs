@@ -72,3 +72,9 @@ impl From<Vec<u8>> for BinString {
         BinString::from_bytes(bytes)
     }
 }
+
+impl From<&Vec<u8>> for BinString {
+    fn from(bytes: &Vec<u8>) -> Self {
+        BinString::from_bytes(bytes.to_owned())
+    }
+}

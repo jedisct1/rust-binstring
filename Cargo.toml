@@ -1,8 +1,7 @@
 [package]
 name = "binstring"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "Binary strings"
 license = "MIT"
-
