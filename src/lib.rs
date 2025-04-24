@@ -7,7 +7,9 @@
 //!
 //! While storing invalid UTF-8 in a `String` is perfectly safe, attempting to treat
 //! the string as valid UTF-8 (for example, by displaying it or using string operations
-//! that assume valid UTF-8) may lead to undefined behavior.
+//! that assume valid UTF-8) may lead to undefined behavior. Methods that return string
+//! references (`as_str()`, `AsRef<str>`) should only be used when you are certain
+//! the data is valid UTF-8.
 //!
 //! # Examples
 //!
@@ -127,6 +129,173 @@ impl BinString {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    /// Returns a new `BinString` containing the concatenation of this string and another.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s1 = BinString::new("hello");
+    /// let s2 = BinString::new(" world");
+    /// assert_eq!(s1.concat(&s2).as_str(), "hello world");
+    /// ```
+    pub fn concat(&self, other: &BinString) -> BinString {
+        let mut bytes = self.as_bytes().to_vec();
+        bytes.extend_from_slice(other.as_bytes());
+        BinString::from_bytes(bytes)
+    }
+
+    /// Returns a new `BinString` containing a slice of this string.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the range is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert_eq!(s.slice(1..4).as_str(), "ell");
+    /// ```
+    pub fn slice<R: std::ops::RangeBounds<usize>>(&self, range: R) -> BinString {
+        use std::ops::Bound;
+        let start = match range.start_bound() {
+            Bound::Included(&n) => n,
+            Bound::Excluded(&n) => n + 1,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Included(&n) => n + 1,
+            Bound::Excluded(&n) => n,
+            Bound::Unbounded => self.len(),
+        };
+        BinString::from_bytes(&self.as_bytes()[start..end])
+    }
+
+    /// Returns `true` if this string starts with the given bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert!(s.starts_with(&[104, 101])); // "he"
+    /// ```
+    pub fn starts_with(&self, prefix: &[u8]) -> bool {
+        self.as_bytes().starts_with(prefix)
+    }
+
+    /// Returns `true` if this string ends with the given bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert!(s.ends_with(&[108, 111])); // "lo"
+    /// ```
+    pub fn ends_with(&self, suffix: &[u8]) -> bool {
+        self.as_bytes().ends_with(suffix)
+    }
+
+    /// Returns `true` if this string contains the given bytes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert!(s.contains(&[101, 108])); // "el"
+    /// ```
+    pub fn contains(&self, needle: &[u8]) -> bool {
+        self.as_bytes()
+            .windows(needle.len())
+            .any(|window| window == needle)
+    }
+
+    /// Returns the index of the first occurrence of the given bytes.
+    ///
+    /// Returns `None` if the bytes are not found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert_eq!(s.find(&[101, 108]), Some(1)); // "el"
+    /// assert_eq!(s.find(&[120]), None); // "x"
+    /// ```
+    pub fn find(&self, needle: &[u8]) -> Option<usize> {
+        self.as_bytes()
+            .windows(needle.len())
+            .position(|window| window == needle)
+    }
+
+    /// Returns the index of the last occurrence of the given bytes.
+    ///
+    /// Returns `None` if the bytes are not found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert_eq!(s.rfind(&[108]), Some(3)); // "l"
+    /// assert_eq!(s.rfind(&[120]), None); // "x"
+    /// ```
+    pub fn rfind(&self, needle: &[u8]) -> Option<usize> {
+        self.as_bytes()
+            .windows(needle.len())
+            .rposition(|window| window == needle)
+    }
+
+    /// Returns a new `BinString` with all occurrences of a byte replaced with another.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("hello");
+    /// assert_eq!(s.replace(108, 120).as_bytes(), &[104, 101, 120, 120, 111]); // "hexxo"
+    /// ```
+    pub fn replace(&self, from: u8, to: u8) -> BinString {
+        let mut bytes = self.as_bytes().to_vec();
+        for byte in &mut bytes {
+            if *byte == from {
+                *byte = to;
+            }
+        }
+        BinString::from_bytes(bytes)
+    }
+
+    /// Returns a new `BinString` with leading and trailing whitespace removed.
+    ///
+    /// # Safety
+    ///
+    /// This method assumes that the string contains valid UTF-8. If the string
+    /// contains invalid UTF-8, the behavior is undefined.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// let s = BinString::new("  hello  ");
+    /// assert_eq!(s.trim().as_str(), "hello");
+    /// ```
+    pub fn trim(&self) -> BinString {
+        BinString::new(self.0.trim())
+    }
 }
 
 impl AsRef<str> for BinString {
@@ -223,5 +392,62 @@ mod tests {
     fn test_is_empty() {
         let bin_str = BinString::new("");
         assert!(bin_str.is_empty());
+    }
+
+    #[test]
+    fn test_concat() {
+        let s1 = BinString::new("hello");
+        let s2 = BinString::new(" world");
+        assert_eq!(s1.concat(&s2).as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_slice() {
+        let s = BinString::new("hello");
+        assert_eq!(s.slice(1..4).as_str(), "ell");
+    }
+
+    #[test]
+    fn test_starts_with() {
+        let s = BinString::new("hello");
+        assert!(s.starts_with(&[104, 101])); // "he"
+    }
+
+    #[test]
+    fn test_ends_with() {
+        let s = BinString::new("hello");
+        assert!(s.ends_with(&[108, 111])); // "lo"
+    }
+
+    #[test]
+    fn test_contains() {
+        let s = BinString::new("hello");
+        assert!(s.contains(&[101, 108])); // "el"
+    }
+
+    #[test]
+    fn test_find() {
+        let s = BinString::new("hello");
+        assert_eq!(s.find(&[101, 108]), Some(1)); // "el"
+        assert_eq!(s.find(&[120]), None); // "x"
+    }
+
+    #[test]
+    fn test_rfind() {
+        let s = BinString::new("hello");
+        assert_eq!(s.rfind(&[108]), Some(3)); // "l"
+        assert_eq!(s.rfind(&[120]), None); // "x"
+    }
+
+    #[test]
+    fn test_replace() {
+        let s = BinString::new("hello");
+        assert_eq!(s.replace(108, 120).as_bytes(), &[104, 101, 120, 120, 111]); // "hexxo"
+    }
+
+    #[test]
+    fn test_trim() {
+        let s = BinString::new("  hello  ");
+        assert_eq!(s.trim().as_str(), "hello");
     }
 }

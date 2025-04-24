@@ -64,10 +64,10 @@ use binstring::BinString;
 
 let bin_str = BinString::new("hello");
 
-// As string slice
+// As string slice (only safe with valid UTF-8)
 assert_eq!(bin_str.as_str(), "hello");
 
-// As byte slice
+// As byte slice (always safe)
 assert_eq!(bin_str.as_bytes(), &[104, 101, 108, 108, 111]);
 
 // Get length
@@ -75,6 +75,31 @@ assert_eq!(bin_str.len(), 5);
 
 // Check if empty
 assert!(!bin_str.is_empty());
+```
+
+### Byte-Level Operations
+
+```rust
+use binstring::BinString;
+
+let s = BinString::new("hello");
+
+// Concatenation
+let s2 = BinString::new(" world");
+assert_eq!(s.concat(&s2).as_bytes(), b"hello world");
+
+// Slicing
+assert_eq!(s.slice(1..4).as_bytes(), b"ell");
+
+// Pattern matching
+assert!(s.starts_with(b"he"));
+assert!(s.ends_with(b"lo"));
+assert!(s.contains(b"el"));
+assert_eq!(s.find(b"el"), Some(1));
+assert_eq!(s.rfind(b"l"), Some(3));
+
+// Byte replacement
+assert_eq!(s.replace(b'l', b'x').as_bytes(), b"hexxo");
 ```
 
 ### Converting Back
@@ -96,3 +121,5 @@ assert_eq!(s, "hello");
 ## Safety
 
 While storing invalid UTF-8 in a `String` is perfectly safe, attempting to treat the string as valid UTF-8 (for example, by displaying it or using string operations that assume valid UTF-8) may lead to undefined behavior.
+
+Most operations in this library work at the byte level and are safe to use with any binary data. However, some methods like `trim()` assume valid UTF-8 and should only be used when you are certain the data is valid UTF-8.
