@@ -599,7 +599,7 @@ mod tests {
     #[test]
     fn test_display() {
         let s = BinString::new("hello");
-        assert_eq!(format!("{}", s), "hello");
+        assert_eq!(format!("{s}"), "hello");
     }
 
     #[test]
