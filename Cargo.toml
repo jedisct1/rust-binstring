@@ -1,7 +1,13 @@
 [package]
 name = "binstring"
-version = "0.1.2"
+version = "0.1.4"
 edition = "2021"
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "Store binary data as a string"
 license = "MIT"
+repository = "https://github.com/jedisct1/rust-binstring.git"
+homepage = "https://github.com/jedisct1/rust-binstring"
+documentation = "https://docs.rs/binstring"
+readme = "README.md"
+keywords = ["string", "binary", "utf8"]
+categories = ["encoding", "data-structures"]
