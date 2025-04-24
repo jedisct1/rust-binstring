@@ -7,9 +7,11 @@
 //!
 //! While storing invalid UTF-8 in a `String` is perfectly safe, attempting to treat
 //! the string as valid UTF-8 (for example, by displaying it or using string operations
-//! that assume valid UTF-8) may lead to undefined behavior. Methods that return string
-//! references (`as_str()`, `AsRef<str>`) should only be used when you are certain
-//! the data is valid UTF-8.
+//! that assume valid UTF-8) may lead to undefined behavior.
+//!
+//! Most operations in this library work at the byte level and are safe to use with
+//! any binary data. However, some methods like `trim()` assume valid UTF-8 and should
+//! only be used when you are certain the data is valid UTF-8.
 //!
 //! # Examples
 //!
@@ -26,6 +28,19 @@
 //! assert_eq!(bin_str.as_bytes(), &[104, 101, 108, 108, 111]);
 //! ```
 
+use std::fmt;
+use std::ops;
+
+/// A type that wraps a `String` and provides conversion methods between binary data and strings.
+///
+/// # Examples
+///
+/// ```
+/// use binstring::BinString;
+///
+/// let bin_str = BinString::new("hello");
+/// assert_eq!(bin_str.as_str(), "hello");
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct BinString(pub String);
 
@@ -40,6 +55,7 @@ impl BinString {
     /// let bin_str = BinString::new("hello");
     /// assert_eq!(bin_str.as_str(), "hello");
     /// ```
+    #[inline]
     pub fn new(s: impl Into<String>) -> Self {
         BinString(s.into())
     }
@@ -55,6 +71,7 @@ impl BinString {
     /// let bin_str = BinString::from_bytes(bytes);
     /// assert_eq!(bin_str.as_bytes(), &[104, 101, 108, 108, 111]);
     /// ```
+    #[inline]
     pub fn from_bytes(bytes: impl Into<Vec<u8>>) -> Self {
         BinString(unsafe { String::from_utf8_unchecked(bytes.into()) })
     }
@@ -70,6 +87,7 @@ impl BinString {
     /// let s = bin_str.unwrap();
     /// assert_eq!(s, "hello");
     /// ```
+    #[inline]
     pub fn unwrap(self) -> String {
         self.0
     }
@@ -84,6 +102,7 @@ impl BinString {
     /// let bin_str = BinString::new("hello");
     /// assert_eq!(bin_str.as_str(), "hello");
     /// ```
+    #[inline]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -98,6 +117,7 @@ impl BinString {
     /// let bin_str = BinString::new("hello");
     /// assert_eq!(bin_str.as_bytes(), &[104, 101, 108, 108, 111]);
     /// ```
+    #[inline]
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
@@ -112,6 +132,7 @@ impl BinString {
     /// let bin_str = BinString::new("hello");
     /// assert_eq!(bin_str.len(), 5);
     /// ```
+    #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -126,6 +147,7 @@ impl BinString {
     /// let bin_str = BinString::new("");
     /// assert!(bin_str.is_empty());
     /// ```
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -141,6 +163,7 @@ impl BinString {
     /// let s2 = BinString::new(" world");
     /// assert_eq!(s1.concat(&s2).as_str(), "hello world");
     /// ```
+    #[inline]
     pub fn concat(&self, other: &BinString) -> BinString {
         let mut bytes = self.as_bytes().to_vec();
         bytes.extend_from_slice(other.as_bytes());
@@ -161,8 +184,8 @@ impl BinString {
     /// let s = BinString::new("hello");
     /// assert_eq!(s.slice(1..4).as_str(), "ell");
     /// ```
-    pub fn slice<R: std::ops::RangeBounds<usize>>(&self, range: R) -> BinString {
-        use std::ops::Bound;
+    pub fn slice<R: ops::RangeBounds<usize>>(&self, range: R) -> BinString {
+        use ops::Bound;
         let start = match range.start_bound() {
             Bound::Included(&n) => n,
             Bound::Excluded(&n) => n + 1,
@@ -173,6 +196,11 @@ impl BinString {
             Bound::Excluded(&n) => n,
             Bound::Unbounded => self.len(),
         };
+        assert!(start <= end, "start must be less than or equal to end");
+        assert!(
+            end <= self.len(),
+            "end must be less than or equal to length"
+        );
         BinString::from_bytes(&self.as_bytes()[start..end])
     }
 
@@ -186,6 +214,7 @@ impl BinString {
     /// let s = BinString::new("hello");
     /// assert!(s.starts_with(&[104, 101])); // "he"
     /// ```
+    #[inline]
     pub fn starts_with(&self, prefix: &[u8]) -> bool {
         self.as_bytes().starts_with(prefix)
     }
@@ -200,6 +229,7 @@ impl BinString {
     /// let s = BinString::new("hello");
     /// assert!(s.ends_with(&[108, 111])); // "lo"
     /// ```
+    #[inline]
     pub fn ends_with(&self, suffix: &[u8]) -> bool {
         self.as_bytes().ends_with(suffix)
     }
@@ -214,6 +244,7 @@ impl BinString {
     /// let s = BinString::new("hello");
     /// assert!(s.contains(&[101, 108])); // "el"
     /// ```
+    #[inline]
     pub fn contains(&self, needle: &[u8]) -> bool {
         self.as_bytes()
             .windows(needle.len())
@@ -233,6 +264,7 @@ impl BinString {
     /// assert_eq!(s.find(&[101, 108]), Some(1)); // "el"
     /// assert_eq!(s.find(&[120]), None); // "x"
     /// ```
+    #[inline]
     pub fn find(&self, needle: &[u8]) -> Option<usize> {
         self.as_bytes()
             .windows(needle.len())
@@ -252,6 +284,7 @@ impl BinString {
     /// assert_eq!(s.rfind(&[108]), Some(3)); // "l"
     /// assert_eq!(s.rfind(&[120]), None); // "x"
     /// ```
+    #[inline]
     pub fn rfind(&self, needle: &[u8]) -> Option<usize> {
         self.as_bytes()
             .windows(needle.len())
@@ -268,6 +301,7 @@ impl BinString {
     /// let s = BinString::new("hello");
     /// assert_eq!(s.replace(108, 120).as_bytes(), &[104, 101, 120, 120, 111]); // "hexxo"
     /// ```
+    #[inline]
     pub fn replace(&self, from: u8, to: u8) -> BinString {
         let mut bytes = self.as_bytes().to_vec();
         for byte in &mut bytes {
@@ -293,54 +327,69 @@ impl BinString {
     /// let s = BinString::new("  hello  ");
     /// assert_eq!(s.trim().as_str(), "hello");
     /// ```
+    #[inline]
     pub fn trim(&self) -> BinString {
         BinString::new(self.0.trim())
     }
 }
 
+impl fmt::Display for BinString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl AsRef<str> for BinString {
+    #[inline]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
 impl AsRef<[u8]> for BinString {
+    #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
 impl From<String> for BinString {
+    #[inline]
     fn from(s: String) -> Self {
         BinString::new(s)
     }
 }
 
 impl From<BinString> for String {
+    #[inline]
     fn from(s: BinString) -> Self {
         s.0
     }
 }
 
 impl From<&str> for BinString {
+    #[inline]
     fn from(s: &str) -> Self {
         BinString::new(s.to_string())
     }
 }
 
 impl From<&[u8]> for BinString {
+    #[inline]
     fn from(bytes: &[u8]) -> Self {
         BinString::from_bytes(bytes.to_vec())
     }
 }
 
 impl From<Vec<u8>> for BinString {
+    #[inline]
     fn from(bytes: Vec<u8>) -> Self {
         BinString::from_bytes(bytes)
     }
 }
 
 impl From<&Vec<u8>> for BinString {
+    #[inline]
     fn from(bytes: &Vec<u8>) -> Self {
         BinString::from_bytes(bytes.to_owned())
     }
@@ -408,6 +457,13 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_slice_out_of_bounds() {
+        let s = BinString::new("hello");
+        let _ = s.slice(10..20);
+    }
+
+    #[test]
     fn test_starts_with() {
         let s = BinString::new("hello");
         assert!(s.starts_with(&[104, 101])); // "he"
@@ -449,5 +505,31 @@ mod tests {
     fn test_trim() {
         let s = BinString::new("  hello  ");
         assert_eq!(s.trim().as_str(), "hello");
+    }
+
+    #[test]
+    fn test_display() {
+        let s = BinString::new("hello");
+        assert_eq!(format!("{}", s), "hello");
+    }
+
+    #[test]
+    fn test_from_str() {
+        let s: BinString = "hello".into();
+        assert_eq!(s.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_from_vec_u8() {
+        let bytes = vec![104, 101, 108, 108, 111];
+        let s: BinString = bytes.into();
+        assert_eq!(s.as_bytes(), &[104, 101, 108, 108, 111]);
+    }
+
+    #[test]
+    fn test_from_slice_u8() {
+        let bytes: &[u8] = &[104, 101, 108, 108, 111];
+        let s: BinString = bytes.into();
+        assert_eq!(s.as_bytes(), &[104, 101, 108, 108, 111]);
     }
 }
