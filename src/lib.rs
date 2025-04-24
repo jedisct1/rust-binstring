@@ -428,13 +428,6 @@ impl Borrow<str> for BinString {
     }
 }
 
-impl Borrow<[u8]> for BinString {
-    #[inline]
-    fn borrow(&self) -> &[u8] {
-        self.as_bytes()
-    }
-}
-
 impl Extend<char> for BinString {
     #[inline]
     fn extend<T: IntoIterator<Item = char>>(&mut self, iter: T) {
@@ -659,9 +652,8 @@ mod tests {
 
     #[test]
     fn test_borrow_bytes() {
-        use std::borrow::Borrow;
         let s = BinString::new("hello");
-        let borrowed: &[u8] = s.borrow();
+        let borrowed = s.as_bytes();
         assert_eq!(borrowed, &[104, 101, 108, 108, 111]);
     }
 
