@@ -28,8 +28,11 @@
 //! assert_eq!(bin_str.as_bytes(), &[104, 101, 108, 108, 111]);
 //! ```
 
+use std::borrow::Borrow;
 use std::fmt;
+use std::iter::FromIterator;
 use std::ops;
+use std::ops::{Deref, DerefMut};
 
 /// A type that wraps a `String` and provides conversion methods between binary data and strings.
 ///
@@ -395,6 +398,99 @@ impl From<&Vec<u8>> for BinString {
     }
 }
 
+impl Default for BinString {
+    #[inline]
+    fn default() -> Self {
+        BinString(String::new())
+    }
+}
+
+impl Deref for BinString {
+    type Target = String;
+
+    #[inline]
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+
+impl DerefMut for BinString {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut String {
+        &mut self.0
+    }
+}
+
+impl Borrow<str> for BinString {
+    #[inline]
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Borrow<[u8]> for BinString {
+    #[inline]
+    fn borrow(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl Extend<char> for BinString {
+    #[inline]
+    fn extend<T: IntoIterator<Item = char>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+
+impl<'a> Extend<&'a char> for BinString {
+    #[inline]
+    fn extend<T: IntoIterator<Item = &'a char>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+
+impl Extend<String> for BinString {
+    #[inline]
+    fn extend<T: IntoIterator<Item = String>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+
+impl<'a> Extend<&'a str> for BinString {
+    #[inline]
+    fn extend<T: IntoIterator<Item = &'a str>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+
+impl FromIterator<char> for BinString {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = char>>(iter: T) -> Self {
+        BinString::new(String::from_iter(iter))
+    }
+}
+
+impl<'a> FromIterator<&'a char> for BinString {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = &'a char>>(iter: T) -> Self {
+        BinString::new(String::from_iter(iter))
+    }
+}
+
+impl FromIterator<String> for BinString {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = String>>(iter: T) -> Self {
+        BinString::new(String::from_iter(iter))
+    }
+}
+
+impl<'a> FromIterator<&'a str> for BinString {
+    #[inline]
+    fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {
+        BinString::new(String::from_iter(iter))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -531,5 +627,67 @@ mod tests {
         let bytes: &[u8] = &[104, 101, 108, 108, 111];
         let s: BinString = bytes.into();
         assert_eq!(s.as_bytes(), &[104, 101, 108, 108, 111]);
+    }
+
+    #[test]
+    fn test_default() {
+        let s = BinString::default();
+        assert!(s.is_empty());
+    }
+
+    #[test]
+    fn test_deref() {
+        let s = BinString::new("hello");
+        assert_eq!(s.len(), 5);
+        assert_eq!(s.capacity(), 5);
+    }
+
+    #[test]
+    fn test_deref_mut() {
+        let mut s = BinString::new("hello");
+        s.push_str(" world");
+        assert_eq!(s.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_borrow_str() {
+        use std::borrow::Borrow;
+        let s = BinString::new("hello");
+        let borrowed: &str = s.borrow();
+        assert_eq!(borrowed, "hello");
+    }
+
+    #[test]
+    fn test_borrow_bytes() {
+        use std::borrow::Borrow;
+        let s = BinString::new("hello");
+        let borrowed: &[u8] = s.borrow();
+        assert_eq!(borrowed, &[104, 101, 108, 108, 111]);
+    }
+
+    #[test]
+    fn test_extend_chars() {
+        let mut s = BinString::new("hello");
+        s.extend([' ', 'w', 'o', 'r', 'l', 'd']);
+        assert_eq!(s.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_extend_str() {
+        let mut s = BinString::new("hello");
+        s.extend([" ", "world"]);
+        assert_eq!(s.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_from_iter_chars() {
+        let s: BinString = ['h', 'e', 'l', 'l', 'o'].iter().collect();
+        assert_eq!(s.as_str(), "hello");
+    }
+
+    #[test]
+    fn test_from_iter_str() {
+        let s: BinString = ["hello", " ", "world"].into_iter().collect();
+        assert_eq!(s.as_str(), "hello world");
     }
 }
