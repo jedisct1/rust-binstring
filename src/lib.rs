@@ -334,6 +334,30 @@ impl BinString {
     pub fn trim(&self) -> BinString {
         BinString::new(self.0.trim())
     }
+
+    /// Checks if the `BinString` contains only valid UTF-8 characters.
+    ///
+    /// This is useful to determine if the `BinString` can be safely used as a Rust string.
+    /// If this returns `false`, the `BinString` should be treated as binary data only.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use binstring::BinString;
+    ///
+    /// // Valid UTF-8
+    /// let valid = BinString::new("hello");
+    /// assert!(valid.is_valid_utf8());
+    ///
+    /// // Invalid UTF-8
+    /// let bytes = vec![0xFF, 0xFE, 0xFD];
+    /// let invalid = BinString::from_bytes(bytes);
+    /// assert!(!invalid.is_valid_utf8());
+    /// ```
+    #[inline]
+    pub fn is_valid_utf8(&self) -> bool {
+        std::str::from_utf8(self.as_bytes()).is_ok()
+    }
 }
 
 impl fmt::Display for BinString {
@@ -681,5 +705,20 @@ mod tests {
     fn test_from_iter_str() {
         let s: BinString = ["hello", " ", "world"].into_iter().collect();
         assert_eq!(s.as_str(), "hello world");
+    }
+
+    #[test]
+    fn test_is_valid_utf8() {
+        // Valid UTF-8
+        let valid = BinString::new("hello");
+        assert!(valid.is_valid_utf8());
+
+        // Another valid UTF-8 with non-ASCII characters
+        let valid_unicode = BinString::new("こんにちは");
+        assert!(valid_unicode.is_valid_utf8());
+
+        // Invalid UTF-8
+        let invalid = BinString::from_bytes(vec![0xFF, 0xFE, 0xFD]);
+        assert!(!invalid.is_valid_utf8());
     }
 }
