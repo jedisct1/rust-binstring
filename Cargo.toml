@@ -1,6 +1,6 @@
 [package]
 name = "binstring"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 rust-version = "1.79"
 include = ["/src/**/*.rs", "/README.md", "/LICENSE"]
