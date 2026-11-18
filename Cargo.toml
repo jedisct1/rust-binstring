@@ -2,6 +2,8 @@
 name = "binstring"
 version = "0.1.8"
 edition = "2021"
+rust-version = "1.79"
+include = ["/src/**/*.rs", "/README.md", "/LICENSE"]
 authors = ["Frank Denis <github@pureftpd.org>"]
 description = "Binary strings for storing binary data, with byte-level search, slicing, replacement, and conversions."
 license = "MIT"
