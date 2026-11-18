@@ -53,7 +53,7 @@ let bytes = vec![104, 101, 108, 108, 111];
 let bin_str = BinString::from(bytes);
 
 // From &[u8]
-let bytes = &[104, 101, 108, 108, 111];
+let bytes: &[u8] = &[104, 101, 108, 108, 111];
 let bin_str = BinString::from(bytes);
 ```
 
@@ -110,7 +110,7 @@ use binstring::BinString;
 let bin_str = BinString::new("hello");
 
 // Get the underlying String
-let s = bin_str.unwrap();
+let s = bin_str.clone().unwrap();
 assert_eq!(s, "hello");
 
 // Or use From trait
@@ -122,4 +122,9 @@ assert_eq!(s, "hello");
 
 While storing invalid UTF-8 in a `String` is perfectly safe, attempting to treat the string as valid UTF-8 (for example, by displaying it or using string operations that assume valid UTF-8) may lead to undefined behavior.
 
-Most operations in this library work at the byte level and are safe to use with any binary data. However, some methods like `trim()` assume valid UTF-8 and should only be used when you are certain the data is valid UTF-8.
+The methods defined by `BinString`, and its `Debug` and `Display` implementations, work on raw bytes and are fine with any data.
+
+`Debug` shows invalid UTF-8 as `\xNN` escapes, and `Display` writes the bytes as they are.
+
+Methods that come from `String` or `str` through `Deref`, like `chars()` or `pop()`, expect valid UTF-8.
+Only use them when you know the data is valid text.
